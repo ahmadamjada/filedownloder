@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Downloader & Uploader</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+  <div class="container mx-auto p-4">
+    <h1 class="text-3xl font-bold text-center mb-6">File Downloader & Uploader</h1>
+
+    <!-- File Upload Section -->
+    <div class="bg-white shadow-md rounded p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Upload a File</h2>
+      <form id="upload-form" class="flex flex-col items-center">
+        <input 
+          type="file" 
+          id="file" 
+          class="border p-2 w-full mb-4 rounded" 
+          accept=".mp4,.mp3,.jpg,.png,.pdf,.mkv,.zip,.rar,.tar,.tar.gz"
+        />
+        <button 
+          type="button" 
+          id="upload-btn"
+          class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+        >
+          Upload
+        </button>
+      </form>
+      <div id="upload-progress" class="w-full bg-gray-200 rounded h-4 mt-4 hidden">
+        <div class="bg-green-500 h-4 rounded" style="width: 0%;"></div>
+      </div>
+      <p id="upload-message" class="text-center mt-4 text-red-500"></p>
+    </div>
+
+    <!-- File Download Section -->
+    <div class="bg-white shadow-md rounded p-6">
+      <h2 class="text-xl font-semibold mb-4">Download a File</h2>
+      <form id="download-form" class="flex flex-col items-center">
+        <select 
+          id="filename" 
+          class="border p-2 w-full mb-4 rounded"
+        >
+          <option value="" disabled selected>Select a file</option>
+        </select>
+        <button 
+          type="submit" 
+          class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Download
+        </button>
+      </form>
+      <p id="message" class="text-center mt-4 text-red-500"></p>
+    </div>
+  </div>
+
+  <script>
+    // Fetch files from the server and populate the dropdown
+    fetch("/files")
+      .then((response) => response.json())
+      .then((files) => {
+        const dropdown = document.getElementById("filename");
+        files.forEach((file) => {
+          const option = document.createElement("option");
+          option.value = file;
+          option.textContent = file;
+          dropdown.appendChild(option);
+        });
+      })
+      .catch((error) => {
+        console.error("Error fetching files:", error);
+        document.getElementById("message").innerText = "Error loading files.";
+      });
+
+    // Handle file download
+    document.getElementById("download-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const filename = document.getElementById("filename").value;
+      if (filename) {
+        window.location.href = `/download/${filename}`;
+      } else {
+        document.getElementById("message").innerText = "Please select a file.";
+      }
+    });
+
+    // Handle file upload
+    document.getElementById("upload-btn").addEventListener("click", () => {
+      const fileInput = document.getElementById("file");
+      const file = fileInput.files[0];
+
+      if (!file) {
+        document.getElementById("upload-message").innerText = "Please select a file to upload.";
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const uploadProgress = document.getElementById("upload-progress");
+      const progressBar = uploadProgress.querySelector("div");
+
+      document.getElementById("upload-message").innerText = "";
+      uploadProgress.style.display = "block";
+      progressBar.style.width = "0%";
+
+      fetch("/upload", {
+        method: "POST",
+        body: formData,
+      }).then((response) => {
+        if (response.ok) {
+          progressBar.style.width = "100%";
+          document.getElementById("upload-message").innerText = "File uploaded successfully.";
+          // Reload the file dropdown after successful upload
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          document.getElementById("upload-message").innerText = "File upload failed.";
+        }
+      }).catch((error) => {
+        console.error("Error uploading file:", error);
+        document.getElementById("upload-message").innerText = "An error occurred during upload.";
+      });
+    });
+  </script>
+</body>
+</html>
